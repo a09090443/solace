@@ -1,0 +1,247 @@
+{
+	"info": {
+		"_postman_id": "15324b8d-00fd-4a90-811c-1875a3e6c513",
+		"name": "Solace",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "3129584"
+	},
+	"item": [
+		{
+			"name": "listen-topic",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:9090/api/solace/subscribe/topic/v1/app1/test/conn/-/pub",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "9090",
+					"path": [
+						"api",
+						"solace",
+						"subscribe",
+						"topic",
+						"v1",
+						"app1",
+						"test",
+						"conn",
+						"-",
+						"pub"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "send-topic-msg",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "來自 Topic-app1 的測試訊息",
+					"options": {
+						"raw": {
+							"language": "text"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:9090/api/solace/topic/v1/app1/test/conn/-/pub",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "9090",
+					"path": [
+						"api",
+						"solace",
+						"topic",
+						"v1",
+						"app1",
+						"test",
+						"conn",
+						"-",
+						"pub"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "send-topic-file",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "formdata",
+					"formdata": [
+						{
+							"key": "file",
+							"type": "file",
+							"src": "/D:/tmp/same_file.txt"
+						}
+					]
+				},
+				"url": {
+					"raw": "http://localhost:9090/api/solace/topic/file/tutorial/topic/file",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "9090",
+					"path": [
+						"api",
+						"solace",
+						"topic",
+						"file",
+						"tutorial",
+						"topic",
+						"file"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "send-queue-msg",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "來自 App1 的測試訊息",
+					"options": {
+						"raw": {
+							"language": "text"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:9090/api/solace/topic/v1/app1/test/conn/-/pub",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "9090",
+					"path": [
+						"api",
+						"solace",
+						"topic",
+						"v1",
+						"app1",
+						"test",
+						"conn",
+						"-",
+						"pub"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "listen-queue",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:9090/api/solace/listen/queue/q-app1-test-file",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "9090",
+					"path": [
+						"api",
+						"solace",
+						"listen",
+						"queue",
+						"q-app1-test-file"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "receive-queue-msg",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:9090/api/solace/messages/queue/q-app2-test-conn",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "9090",
+					"path": [
+						"api",
+						"solace",
+						"messages",
+						"queue",
+						"q-app2-test-conn"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "send-queue-file",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "formdata",
+					"formdata": [
+						{
+							"key": "file",
+							"type": "file",
+							"src": "/D:/tmp/not_exist_file.txt"
+						}
+					]
+				},
+				"url": {
+					"raw": "http://localhost:9090/api/solace/queue/file/q-app1-test-file",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "9090",
+					"path": [
+						"api",
+						"solace",
+						"queue",
+						"file",
+						"q-app1-test-file"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "receive-queue-file",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:9090/api/solace/messages/queue/q-app1-test-file",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "9090",
+					"path": [
+						"api",
+						"solace",
+						"messages",
+						"queue",
+						"q-app1-test-file"
+					]
+				}
+			},
+			"response": []
+		}
+	]
+}

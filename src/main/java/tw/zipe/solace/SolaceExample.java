@@ -33,7 +33,7 @@ public class SolaceExample {
     private static final String PASSWORD = "default";
     private static final String VPN_NAME = "default";
     private static final String TOPIC_NAME = "tutorial/topic";
-    private static final String QUEUE_NAME = "tutorial/queue";
+    private static final String QUEUE_NAME = "q-app1-test-conn";
 
     private JCSMPSession session;
     private XMLMessageProducer producer;
@@ -427,13 +427,13 @@ public class SolaceExample {
             example.subscribeToTopic();
 
             // 訂閱檔案 Topic
-            example.receiveFileFromTopic(saveDirectory);
+//            example.receiveFileFromTopic(saveDirectory);
 
             // 從 Queue 接收訊息
-            example.receiveFromQueue();
+//            example.receiveFromQueue();
 
             // 從 Queue 接收檔案
-            example.receiveFileFromQueue(saveDirectory);
+//            example.receiveFileFromQueue(saveDirectory);
 
             // 等待一段時間讓訂閱生效
             Thread.sleep(1000);
@@ -442,17 +442,17 @@ public class SolaceExample {
             example.sendTopicMessage("Hello from Topic!");
 
             // 發送訊息到 Queue
-            example.sendQueueMessage("Hello from Queue!");
+//            example.sendQueueMessage("Hello from Queue!");
 
             // 發送檔案到 Topic
-            example.sendFileToTopic(fileToSend);
+//            example.sendFileToTopic(fileToSend);
 
             // 發送檔案到 Queue
-            example.sendFileToQueue(fileToSend);
+//            example.sendFileToQueue(fileToSend);
 
             // 持續運行 20 秒以接收訊息
-            System.out.println("等待接收訊息和檔案... (20 秒)");
-            Thread.sleep(20000);
+//            System.out.println("等待接收訊息和檔案... (20 秒)");
+//            Thread.sleep(20000);
 
         } catch (Exception e) {
             System.err.println("發生錯誤: " + e.getMessage());
