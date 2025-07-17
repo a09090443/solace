@@ -64,6 +64,21 @@ public class SolaceService {
     @Value("${solace.received.files.directory:received_files}")
     private String receivedFilesDirectory;
 
+    @Value("${solace.jms.ssl.trust-store:#{null}}")
+    private String trustStore;
+
+    @Value("${solace.jms.ssl.trust-store-password:#{null}}")
+    private String trustStorePassword;
+
+    @Value("${solace.jms.ssl.validate-certificate:true}")
+    private boolean validateCertificate;
+
+    @Value("${solace.default.topic:default/topic}")
+    private String defaultTopic;
+
+    @Value("${solace.default.queue:default-queue}")
+    private String defaultQueue;
+
     private JCSMPSession session;
     private XMLMessageProducer producer;
 
@@ -88,11 +103,44 @@ public class SolaceService {
     @PostConstruct
     public void initialize() throws JCSMPException {
         logger.info("正在初始化 Solace 連線...");
+
+        // --- Host 協定轉換 (smf -> tcp) ---
+        // 為了與 JCSMP API 相容，自動將 'smf://' 和 'smfs://' 協定轉換為 'tcp://' 和 'tcps://'。
+        // 這樣可以增加設定檔的靈活性。
+        String connectionHost = this.host;
+        if (connectionHost != null && (connectionHost.contains("smf://") || connectionHost.contains("smfs://"))) {
+            logger.info("偵測到 'smf(s)://' 協定，將自動轉換為 'tcp(s)://'。原始 host: {}", this.host);
+            connectionHost = connectionHost.replace("smf://", "tcp://").replace("smfs://", "tcps://");
+            logger.info("轉換後 host: {}", connectionHost);
+        }
+
         final JCSMPProperties properties = new JCSMPProperties();
-        properties.setProperty(JCSMPProperties.HOST, host);
+        properties.setProperty(JCSMPProperties.HOST, connectionHost);
         properties.setProperty(JCSMPProperties.USERNAME, username);
         properties.setProperty(JCSMPProperties.PASSWORD, password);
         properties.setProperty(JCSMPProperties.VPN_NAME, vpnName);
+
+        // --- SSL/TLS Configuration ---
+        // 檢查 host 字串中是否包含 'tcps://' 來決定是否啟用 SSL。
+        // 使用 contains() 而非 startsWith() 是為了正確處理高可用性 (HA) 的主機列表 (例如 "tcp://host1,tcps://host2")。
+        String lowerCaseHost = (connectionHost != null) ? connectionHost.toLowerCase() : "";
+        if (lowerCaseHost.contains("tcps://")) {
+            logger.info("偵測到安全連線 (tcps://)，正在設定 SSL 屬性...");
+            // 設定自訂的 TrustStore，如果 application.properties 中有提供
+            if (trustStore != null && !trustStore.isEmpty()) {
+                properties.setProperty(JCSMPProperties.SSL_TRUST_STORE, trustStore);
+                if (trustStorePassword != null) {
+                    properties.setProperty(JCSMPProperties.SSL_TRUST_STORE_PASSWORD, trustStorePassword);
+                }
+                logger.info("已設定自訂 TrustStore: {}", trustStore);
+            }
+
+            // 允許關閉憑證驗證 (僅建議用於開發/測試環境)
+            properties.setBooleanProperty(JCSMPProperties.SSL_VALIDATE_CERTIFICATE, validateCertificate);
+            if (!validateCertificate) {
+                logger.warn("!!! 安全性警告: Solace 連線已停用憑證驗證 (SSL_VALIDATE_CERTIFICATE=false)。請勿在生產環境中使用此設定。");
+            }
+        }
         session = JCSMPFactory.onlyInstance().createSession(properties);
         session.connect();
         producer = session.getMessageProducer(new JCSMPStreamingPublishEventHandler() {
@@ -344,4 +392,19 @@ public class SolaceService {
         TOPIC, QUEUE
     }
 
+    /**
+     * 獲取設定檔中設定的預設 Topic 名稱。
+     * @return 預設 Topic 名稱。
+     */
+    public String getDefaultTopic() {
+        return defaultTopic;
+    }
+
+    /**
+     * 獲取設定檔中設定的預設 Queue 名稱。
+     * @return 預設 Queue 名稱。
+     */
+    public String getDefaultQueue() {
+        return defaultQueue;
+    }
 }

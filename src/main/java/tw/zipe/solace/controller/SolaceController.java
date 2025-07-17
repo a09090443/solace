@@ -45,6 +45,22 @@ public class SolaceController {
         return null;
     }
 
+    private String getTopicName(HttpServletRequest request) {
+        String topicName = extractPath(request);
+        if (topicName == null || topicName.isEmpty()) {
+            return solaceService.getDefaultTopic();
+        }
+        return topicName;
+    }
+
+    private String getQueueName(HttpServletRequest request) {
+        String queueName = extractPath(request);
+        if (queueName == null || queueName.isEmpty()) {
+            return solaceService.getDefaultQueue();
+        }
+        return queueName;
+    }
+
     /**
      * 發布文字訊息到指定的 Topic。
      *
@@ -52,9 +68,9 @@ public class SolaceController {
      * @param message   要發送的文字訊息內容。
      * @return ResponseEntity，包含操作成功或失敗的訊息。
      */
-    @PostMapping("/topic/**")
+    @PostMapping(value = {"/topic", "/topic/**"})
     public ResponseEntity<String> publishToTopic(HttpServletRequest request, @RequestBody String message) throws JCSMPException {
-        String topicName = extractPath(request);
+        String topicName = getTopicName(request);
         solaceService.sendTextMessage(topicName, SolaceService.DestinationType.TOPIC, message);
         return ResponseEntity.ok("訊息已成功發送到 Topic: " + topicName);
     }
@@ -66,9 +82,9 @@ public class SolaceController {
      * @param message   要發送的文字訊息內容。
      * @return ResponseEntity，包含操作成功或失敗的訊息。
      */
-    @PostMapping("/queue/**")
+    @PostMapping(value = {"/queue", "/queue/**"})
     public ResponseEntity<String> publishToQueue(HttpServletRequest request, @RequestBody String message) throws JCSMPException {
-        String queueName = extractPath(request);
+        String queueName = getQueueName(request);
         solaceService.sendTextMessage(queueName, SolaceService.DestinationType.QUEUE, message);
         return ResponseEntity.ok("訊息已成功發送到 Queue: " + queueName);
     }
@@ -80,9 +96,9 @@ public class SolaceController {
      * @param file      要上傳的檔案。
      * @return ResponseEntity，包含操作成功或失敗的訊息。
      */
-    @PostMapping("/topic/file/**")
+    @PostMapping(value = {"/topic/file", "/topic/file/**"})
     public ResponseEntity<String> uploadFileToTopic(HttpServletRequest request, @RequestParam("file") MultipartFile file) throws JCSMPException, IOException {
-        String topicName = extractPath(request);
+        String topicName = getTopicName(request);
         solaceService.sendFile(topicName, SolaceService.DestinationType.TOPIC, file.getOriginalFilename(), file.getBytes());
         return ResponseEntity.ok("檔案已成功發送到 Topic: " + topicName);
     }
@@ -94,9 +110,9 @@ public class SolaceController {
      * @param file      要上傳的檔案。
      * @return ResponseEntity，包含操作成功或失敗的訊息。
      */
-    @PostMapping("/queue/file/**")
+    @PostMapping(value = {"/queue/file", "/queue/file/**"})
     public ResponseEntity<String> uploadFileToQueue(HttpServletRequest request, @RequestParam("file") MultipartFile file) throws JCSMPException, IOException {
-        String queueName = extractPath(request);
+        String queueName = getQueueName(request);
         solaceService.sendFile(queueName, SolaceService.DestinationType.QUEUE, file.getOriginalFilename(), file.getBytes());
         return ResponseEntity.ok("檔案已成功發送到 Queue: " + queueName);
     }
@@ -107,9 +123,9 @@ public class SolaceController {
      * @param request   HTTP 請求物件，用於提取 Topic 名稱。
      * @return ResponseEntity，包含操作成功或失敗的訊息。
      */
-    @PostMapping("/subscribe/topic/**")
+    @PostMapping(value = {"/subscribe/topic", "/subscribe/topic/**"})
     public ResponseEntity<String> subscribeToTopic(HttpServletRequest request) throws JCSMPException {
-        String topicName = extractPath(request);
+        String topicName = getTopicName(request);
         solaceService.subscribeToTopic(topicName);
         return ResponseEntity.ok("已成功訂閱 Topic: " + topicName);
     }
@@ -120,9 +136,9 @@ public class SolaceController {
      * @param request   HTTP 請求物件，用於提取 Queue 名稱。
      * @return ResponseEntity，包含操作成功或失敗的訊息。
      */
-    @PostMapping("/listen/queue/**")
+    @PostMapping(value = {"/listen/queue", "/listen/queue/**"})
     public ResponseEntity<String> listenToQueue(HttpServletRequest request) throws JCSMPException {
-        String queueName = extractPath(request);
+        String queueName = getQueueName(request);
         solaceService.receiveFromQueue(queueName);
         return ResponseEntity.ok("已開始監聽 Queue: " + queueName);
     }
@@ -136,9 +152,9 @@ public class SolaceController {
      * @param request   HTTP 請求物件，用於提取 Queue 名稱。
      * @return ResponseEntity 包含一個訊息字串列表。
      */
-    @GetMapping("/messages/queue/**")
+    @GetMapping(value = {"/messages/queue", "/messages/queue/**"})
     public ResponseEntity<List<String>> getQueueMessages(HttpServletRequest request) {
-        String queueName = extractPath(request);
+        String queueName = getQueueName(request);
         List<String> messages = solaceService.getAndClearQueueMessages(queueName);
         return ResponseEntity.ok(messages);
     }
@@ -152,9 +168,9 @@ public class SolaceController {
      * @param request   HTTP 請求物件，用於提取 Topic 名稱。
      * @return ResponseEntity 包含一個訊息字串列表。
      */
-    @GetMapping("/messages/topic/**")
+    @GetMapping(value = {"/messages/topic", "/messages/topic/**"})
     public ResponseEntity<List<String>> getTopicMessages(HttpServletRequest request) {
-        String topicName = extractPath(request);
+        String topicName = getTopicName(request);
         List<String> messages = solaceService.getAndClearTopicMessages(topicName);
         return ResponseEntity.ok(messages);
     }
