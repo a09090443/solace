@@ -8,6 +8,7 @@
 - 上傳並發布檔案到動態指定的 Topic 或 Queue。
 - 訂閱指定的 Topic 以接收訊息。
 - 監聽指定的 Queue 以接收訊息。
+- **支援預設值**：當 API 請求未提供 Topic 或 Queue 名稱時，會自動使用設定檔中的預設值。
 - 獲取已訂閱 Topic 和已監聽 Queue 中的緩存訊息。
 - 附帶 Postman 集合，方便進行 API 測試。
 
@@ -23,19 +24,39 @@
 
 應用程式的設定檔位於 `src/main/resources/application.properties`。
 
+### 完整設定範例
+
+以下是一個較為完整的設定範例，包含了基本連線、安全連線 (SSL/TLS) 以及應用程式的自訂設定。
+
 ```properties
-# Solace 連線資訊
-solace.jms.host=tcp://localhost:55554
+# --- Spring Boot Web 伺服器設定 ---
+server.port=9090
+
+# --- Solace 基本連線設定 ---
+# 使用 smfs:// 或 tcps:// 來啟用安全連線
+solace.jms.host=smfs://localhost:55443
 solace.jms.msg-vpn=default
 solace.jms.client-username=default
 solace.jms.client-password=default
 
-# 伺服器埠號設定
-server.port=9090
+# --- 安全連線 (SSL/TLS) 設定 ---
+# (可選) 自訂信任儲存庫 (TrustStore) 的 JKS 檔案路徑。
+# 當 Broker 使用自簽章憑證或私有 CA 簽發的憑證時，需要此設定。
+solace.jms.ssl.trust-store=D:/path/to/your/truststore.jks
+# (可選) 信任儲存庫的密碼。
+solace.jms.ssl.trust-store-password=changeit
+# (不安全，僅限開發) 是否關閉伺服器憑證驗證。
+# 設定為 false 表示信任所有伺服器憑證，請勿在生產環境中使用。
+solace.jms.ssl.validate-certificate=false
 
-# 用於儲存從 Solace 接收到的檔案的目錄
-# 請將此路徑修改為您本機的有效目錄。
+# --- 應用程式自訂設定 ---
+# 用於儲存從 Solace 接收到的檔案的目錄。請修改為您本機的有效目錄。
 solace.received.files.directory=D:/temp
+
+# --- 預設目的地設定 ---
+# 當 API 請求未提供 Topic 或 Queue 名稱時，使用的預設值。
+solace.default.topic=v1/app/default/topic
+solace.default.queue=q-app-default-queue
 ```
 
 請務必根據您的環境更新這些設定，特別是 `solace.jms.host` 和 `solace.received.files.directory`。
