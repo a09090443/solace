@@ -71,6 +71,36 @@
 			"response": []
 		},
 		{
+			"name": "send-topic-msg(不指定topic name)",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "來自 Topic-tw 的測試訊息",
+					"options": {
+						"raw": {
+							"language": "text"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:9090/api/solace/topic",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "9090",
+					"path": [
+						"api",
+						"solace",
+						"topic"
+					]
+				}
+			},
+			"response": []
+		},
+		{
 			"name": "send-topic-file",
 			"request": {
 				"method": "POST",
@@ -100,6 +130,36 @@
 						"tutorial",
 						"topic",
 						"file"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "send-queue-msg(不指定queue name)",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "來自 Queue-App1 的測試訊息",
+					"options": {
+						"raw": {
+							"language": "text"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:9090/api/solace/queue",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "9090",
+					"path": [
+						"api",
+						"solace",
+						"queue"
 					]
 				}
 			},
@@ -170,7 +230,7 @@
 				"method": "GET",
 				"header": [],
 				"url": {
-					"raw": "http://localhost:9090/api/solace/messages/queue/q-app2-test-conn",
+					"raw": "http://localhost:9090/api/solace/messages/queue/q-app1-test-conn",
 					"protocol": "http",
 					"host": [
 						"localhost"
@@ -181,7 +241,7 @@
 						"solace",
 						"messages",
 						"queue",
-						"q-app2-test-conn"
+						"q-app1-test-conn"
 					]
 				}
 			},
@@ -215,6 +275,38 @@
 						"queue",
 						"file",
 						"q-app1-test-file"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "send-queue-file(不指定queue name)",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "formdata",
+					"formdata": [
+						{
+							"key": "file",
+							"type": "file",
+							"src": "/D:/tmp/same_file.txt"
+						}
+					]
+				},
+				"url": {
+					"raw": "http://localhost:9090/api/solace/queue/file",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "9090",
+					"path": [
+						"api",
+						"solace",
+						"queue",
+						"file"
 					]
 				}
 			},
