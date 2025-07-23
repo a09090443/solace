@@ -16,7 +16,6 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.HandlerMapping;
 import tw.zipe.solace.service.SolaceService;
 
-import java.io.IOException;
 import java.util.List;
 
 /**
@@ -72,7 +71,7 @@ public class SolaceController {
      * @return ResponseEntity，包含操作成功或失敗的訊息。
      */
     @PostMapping(value = {"/topic", "/topic/**"})
-    public ResponseEntity<String> publishToTopic(HttpServletRequest request, @RequestBody String message) throws JCSMPException {
+    public ResponseEntity<String> publishToTopic(HttpServletRequest request, @RequestBody String message) throws Exception {
         String topicName = getTopicName(request);
 
         // Test Case 1.1: Application client as sender - Start logging
@@ -98,7 +97,7 @@ public class SolaceController {
      * @return ResponseEntity，包含操作成功或失敗的訊息。
      */
     @PostMapping(value = {"/queue", "/queue/**"})
-    public ResponseEntity<String> publishToQueue(HttpServletRequest request, @RequestBody String message) throws JCSMPException {
+    public ResponseEntity<String> publishToQueue(HttpServletRequest request, @RequestBody String message) throws Exception {
         String queueName = getQueueName(request);
 
         // Test Case 1.1: Application client as sender - Start logging for Queue
@@ -120,7 +119,7 @@ public class SolaceController {
      * @return ResponseEntity，包含操作成功或失敗的訊息。
      */
     @PostMapping(value = {"/topic/file", "/topic/file/**"})
-    public ResponseEntity<String> uploadFileToTopic(HttpServletRequest request, @RequestParam("file") MultipartFile file) throws JCSMPException, IOException {
+    public ResponseEntity<String> uploadFileToTopic(HttpServletRequest request, @RequestParam("file") MultipartFile file) throws Exception {
         String topicName = getTopicName(request);
 
         // Test Case 1.1: Application client as sender for file
@@ -142,7 +141,7 @@ public class SolaceController {
      * @return ResponseEntity，包含操作成功或失敗的訊息。
      */
     @PostMapping(value = {"/queue/file", "/queue/file/**"})
-    public ResponseEntity<String> uploadFileToQueue(HttpServletRequest request, @RequestParam("file") MultipartFile file) throws JCSMPException, IOException {
+    public ResponseEntity<String> uploadFileToQueue(HttpServletRequest request, @RequestParam("file") MultipartFile file) throws Exception {
         String queueName = getQueueName(request);
 
         // Test Case 1.1: Application client as sender for file
