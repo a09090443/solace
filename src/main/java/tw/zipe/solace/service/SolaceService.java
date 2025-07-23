@@ -1,6 +1,21 @@
 package tw.zipe.solace.service;
 
-import com.solacesystems.jcsmp.*;
+import com.solacesystems.jcsmp.BytesXMLMessage;
+import com.solacesystems.jcsmp.ConsumerFlowProperties;
+import com.solacesystems.jcsmp.Destination;
+import com.solacesystems.jcsmp.FlowReceiver;
+import com.solacesystems.jcsmp.JCSMPException;
+import com.solacesystems.jcsmp.JCSMPFactory;
+import com.solacesystems.jcsmp.JCSMPProperties;
+import com.solacesystems.jcsmp.JCSMPSession;
+import com.solacesystems.jcsmp.JCSMPStreamingPublishEventHandler;
+import com.solacesystems.jcsmp.Queue;
+import com.solacesystems.jcsmp.SDTMap;
+import com.solacesystems.jcsmp.TextMessage;
+import com.solacesystems.jcsmp.Topic;
+import com.solacesystems.jcsmp.XMLMessageConsumer;
+import com.solacesystems.jcsmp.XMLMessageListener;
+import com.solacesystems.jcsmp.XMLMessageProducer;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import org.slf4j.Logger;
@@ -15,12 +30,12 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
-import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
  * Solace 核心服務類別
@@ -75,11 +90,10 @@ public class SolaceService {
     private String keyStoreFormat;
 
     private SolaceConnectionPool producerPool;
-    private JCSMPSession consumerSession;
+    private SolaceConnectionPool consumerPool;
 
     // 追蹤消費者和 Flow 以便優雅地關閉
-    private final List<XMLMessageConsumer> consumers = new ArrayList<>();
-    private final List<FlowReceiver> flowReceivers = new ArrayList<>();
+    private final List<ConsumerInfo> consumerInfos = new CopyOnWriteArrayList<>();
 
     // 用於緩存從 Topic 和 Queue 收到的文字訊息
     private final Map<String, ConcurrentLinkedQueue<String>> topicMessagesCache = new ConcurrentHashMap<>();
@@ -100,15 +114,9 @@ public class SolaceService {
         producerPool = new SolaceConnectionPool(properties);
         logger.info("Solace 生產者連線池已建立。");
 
-        // 建立並連接消費者專用的 Session
-        try {
-            consumerSession = JCSMPFactory.onlyInstance().createSession(properties);
-            consumerSession.connect();
-            logger.info("Solace 消費者連線已成功建立。");
-        } catch (JCSMPException e) {
-            logger.error("建立消費者連線失敗。", e);
-            throw e;
-        }
+        // 初始化消費者連線池
+        consumerPool = new SolaceConnectionPool(properties);
+        logger.info("Solace 消費者連線池已建立。");
     }
 
     private JCSMPProperties createJCSMPProperties(String connectionHost) {
@@ -144,6 +152,9 @@ public class SolaceService {
         } else {
             properties.setProperty(JCSMPProperties.PASSWORD, password);
         }
+        properties.setProperty("reconnect_retries", "-1"); // 啟用無限重連
+        properties.setProperty("reconnect_retry_wait_in_msecs", "3000"); // 重連間隔
+        properties.setBooleanProperty("reapply_subscriptions", true); // 自動重新訂閱
         return properties;
     }
 
@@ -152,15 +163,15 @@ public class SolaceService {
         logger.info("正在關閉 Solace 資源...");
 
         // 關閉消費者資源
-        for (FlowReceiver flow : flowReceivers) {
-            flow.stop();
+        for (ConsumerInfo info : consumerInfos) {
+            info.close();
         }
-        for (XMLMessageConsumer consumer : consumers) {
-            consumer.close();
-        }
-        if (consumerSession != null && !consumerSession.isClosed()) {
-            consumerSession.closeSession();
-            logger.info("Solace 消費者連線已關閉。");
+        consumerInfos.clear();
+
+        // 關閉消費者連線池
+        if (consumerPool != null) {
+            consumerPool.close();
+            logger.info("Solace 消費者連線池已關閉。");
         }
 
         // 關閉生產者連線池
@@ -178,6 +189,7 @@ public class SolaceService {
                 public void responseReceived(String messageID) {
                     logger.info("TEST_CASE_1.1_7.1_PUBLISH_SUCCESS | MessageID: {}", messageID);
                 }
+
                 public void handleError(String messageID, JCSMPException e, long timestamp) {
                     logger.error("TEST_CASE_7.2_PUBLISH_FAILURE | MessageID: {}", messageID, e);
                 }
@@ -210,6 +222,7 @@ public class SolaceService {
                 public void responseReceived(String messageID) {
                     logger.info("File publish success, MessageID: {}", messageID);
                 }
+
                 public void handleError(String messageID, JCSMPException e, long timestamp) {
                     logger.error("File publish failure, MessageID: {}", messageID, e);
                 }
@@ -239,47 +252,59 @@ public class SolaceService {
         }
     }
 
-    public void subscribeToTopic(String topicName) throws JCSMPException {
+    public void subscribeToTopic(String topicName) throws Exception {
         Topic topic = JCSMPFactory.onlyInstance().createTopic(topicName);
-        XMLMessageConsumer consumer = consumerSession.getMessageConsumer(new XMLMessageListener() {
-            @Override
-            public void onReceive(BytesXMLMessage msg) {
-                handleReceivedMessage(msg, topicName, DestinationType.TOPIC);
-            }
+        JCSMPSession session = consumerPool.getSession();
+        try {
+            XMLMessageConsumer consumer = session.getMessageConsumer(new XMLMessageListener() {
+                @Override
+                public void onReceive(BytesXMLMessage msg) {
+                    handleReceivedMessage(msg, topicName, DestinationType.TOPIC);
+                }
 
-            @Override
-            public void onException(JCSMPException e) {
-                logger.error("消費者在 Topic {} 上發生異常: {}", topicName, e.getMessage(), e);
-            }
-        });
-        consumerSession.addSubscription(topic);
-        consumer.start();
-        consumers.add(consumer);
-        logger.info("已成功訂閱 Topic: {}", topicName);
+                @Override
+                public void onException(JCSMPException e) {
+                    logger.error("消費者在 Topic {} 上發生異常: {}", topicName, e.getMessage(), e);
+                }
+            });
+            session.addSubscription(topic);
+            consumer.start();
+            consumerInfos.add(new ConsumerInfo(session, consumer, null));
+            logger.info("已成功訂閱 Topic: {}", topicName);
+        } catch (Exception e) {
+            consumerPool.returnSession(session);
+            throw e;
+        }
     }
 
-    public void receiveFromQueue(String queueName) throws JCSMPException {
+    public void receiveFromQueue(String queueName) throws Exception {
         Queue queue = JCSMPFactory.onlyInstance().createQueue(queueName);
-        ConsumerFlowProperties flowProps = new ConsumerFlowProperties();
-        flowProps.setEndpoint(queue);
-        flowProps.setAckMode(JCSMPProperties.SUPPORTED_MESSAGE_ACK_CLIENT);
+        JCSMPSession session = consumerPool.getSession();
+        try {
+            ConsumerFlowProperties flowProps = new ConsumerFlowProperties();
+            flowProps.setEndpoint(queue);
+            flowProps.setAckMode(JCSMPProperties.SUPPORTED_MESSAGE_ACK_CLIENT);
 
-        FlowReceiver flowReceiver = consumerSession.createFlow(new XMLMessageListener() {
-            @Override
-            public void onReceive(BytesXMLMessage msg) {
-                handleReceivedMessage(msg, queueName, DestinationType.QUEUE);
-                msg.ackMessage();
-            }
+            FlowReceiver flowReceiver = session.createFlow(new XMLMessageListener() {
+                @Override
+                public void onReceive(BytesXMLMessage msg) {
+                    handleReceivedMessage(msg, queueName, DestinationType.QUEUE);
+                    msg.ackMessage();
+                }
 
-            @Override
-            public void onException(JCSMPException e) {
-                logger.error("Queue {} 消費者發生異常: {}", queueName, e.getMessage(), e);
-            }
-        }, flowProps);
+                @Override
+                public void onException(JCSMPException e) {
+                    logger.error("Queue {} 消費者發生異常: {}", queueName, e.getMessage(), e);
+                }
+            }, flowProps);
 
-        flowReceiver.start();
-        flowReceivers.add(flowReceiver);
-        logger.info("已開始監聽 Queue: {}", queueName);
+            flowReceiver.start();
+            consumerInfos.add(new ConsumerInfo(session, null, flowReceiver));
+            logger.info("已開始監聽 Queue: {}", queueName);
+        } catch (Exception e) {
+            consumerPool.returnSession(session);
+            throw e;
+        }
     }
 
     private void handleReceivedMessage(BytesXMLMessage msg, String source, DestinationType type) {
@@ -352,5 +377,28 @@ public class SolaceService {
     public String getDefaultQueue() {
         return defaultQueue;
     }
-}
 
+    private static class ConsumerInfo {
+        private final JCSMPSession session;
+        private final XMLMessageConsumer consumer;
+        private final FlowReceiver flowReceiver;
+
+        public ConsumerInfo(JCSMPSession session, XMLMessageConsumer consumer, FlowReceiver flowReceiver) {
+            this.session = session;
+            this.consumer = consumer;
+            this.flowReceiver = flowReceiver;
+        }
+
+        public void close() {
+            if (flowReceiver != null) {
+                flowReceiver.stop();
+            }
+            if (consumer != null) {
+                consumer.close();
+            }
+            if (session != null && !session.isClosed()) {
+                session.closeSession();
+            }
+        }
+    }
+}

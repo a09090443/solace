@@ -14,7 +14,10 @@ public class SolaceConnectionPool {
         config.setMaxTotal(10); // 最大連線數
         config.setMinIdle(2);   // 最小閒置連線數
         config.setMaxWaitMillis(5000); // 最大等待時間
+        config.setTestWhileIdle(true);
+        config.setTimeBetweenEvictionRunsMillis(60000); // 每分鐘檢查一次
         this.pool = new GenericObjectPool<>(new SolaceSessionFactory(properties), config);
+        this.pool.setTestOnBorrow(true);
     }
 
     public JCSMPSession getSession() throws Exception {
@@ -24,6 +27,16 @@ public class SolaceConnectionPool {
     public void returnSession(JCSMPSession session) {
         if (session != null) {
             pool.returnObject(session);
+        }
+    }
+
+    public void invalidateSession(JCSMPSession session) {
+        if (session != null) {
+            try {
+                pool.invalidateObject(session);
+            } catch (Exception e) {
+                // ignore
+            }
         }
     }
 

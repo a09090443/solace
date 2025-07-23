@@ -162,7 +162,7 @@ public class SolaceController {
      * @return ResponseEntity，包含操作成功或失敗的訊息。
      */
     @PostMapping(value = {"/subscribe/topic", "/subscribe/topic/**"})
-    public ResponseEntity<String> subscribeToTopic(HttpServletRequest request) throws JCSMPException {
+    public ResponseEntity<String> subscribeToTopic(HttpServletRequest request) throws Exception {
         String topicName = getTopicName(request);
 
         // Test Case 11: Session reuse for multiple subscriptions
@@ -183,7 +183,7 @@ public class SolaceController {
      * @return ResponseEntity，包含操作成功或失敗的訊息。
      */
     @PostMapping(value = {"/listen/queue", "/listen/queue/**"})
-    public ResponseEntity<String> listenToQueue(HttpServletRequest request) throws JCSMPException {
+    public ResponseEntity<String> listenToQueue(HttpServletRequest request) throws Exception {
         String queueName = getQueueName(request);
         logger.info("接收到監聽 Queue '{}' 的請求。", queueName);
         solaceService.receiveFromQueue(queueName);
