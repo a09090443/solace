@@ -4,6 +4,7 @@ import com.solacesystems.jcsmp.BytesXMLMessage;
 import com.solacesystems.jcsmp.ConsumerFlowProperties;
 import com.solacesystems.jcsmp.Destination;
 import com.solacesystems.jcsmp.FlowReceiver;
+import com.solacesystems.jcsmp.JCSMPChannelProperties;
 import com.solacesystems.jcsmp.JCSMPException;
 import com.solacesystems.jcsmp.JCSMPFactory;
 import com.solacesystems.jcsmp.JCSMPProperties;
@@ -229,10 +230,12 @@ public class SolaceService {
         } else {
             properties.setProperty(JCSMPProperties.PASSWORD, password);
         }
+        JCSMPChannelProperties cp = (JCSMPChannelProperties) properties
+                .getProperty(JCSMPProperties.CLIENT_CHANNEL_PROPERTIES);
         // 啟用無限重連
-        properties.setProperty("reconnect_retries", "-1");
+        cp.setReconnectRetries(-1);
         // 重連間隔 3 秒
-        properties.setProperty("reconnect_retry_wait_in_msecs", "3000");
+        cp.setReconnectRetryWaitInMillis(5000);
         // 自動重新訂閱 Topic
         properties.setBooleanProperty(JCSMPProperties.REAPPLY_SUBSCRIPTIONS, true);
         return properties;
