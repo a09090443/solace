@@ -33,6 +33,16 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CopyOnWriteArrayList;
 
+/**
+ * Solace 訊息消費者服務。
+ * <p>
+ * 負責從 Solace 訊息代理的 Topic 和 Queue 接收訊息。
+ * 對於 Topic，它使用 {@link XMLMessageConsumer} 進行訂閱。
+ * 對於 Queue，它使用 {@link FlowReceiver} 來保證訊息的可靠接收和確認。
+ * 收到的訊息會被暫存在記憶體快取中，並可透過 API 提取。
+ * 檔案訊息會被儲存到指定的目錄。
+ * </p>
+ */
 @Service
 public class SolaceConsumerService {
 
@@ -45,11 +55,22 @@ public class SolaceConsumerService {
     private final Map<String, ConcurrentLinkedQueue<String>> topicMessagesCache = new ConcurrentHashMap<>();
     private final Map<String, ConcurrentLinkedQueue<String>> queueMessagesCache = new ConcurrentHashMap<>();
 
+    /**
+     * 建構一個新的 SolaceConsumerService。
+     *
+     * @param solaceProperties Solace 組態屬性，用於初始化連線池和設定檔案儲存路徑。
+     */
     public SolaceConsumerService(SolaceProperties solaceProperties) {
         this.solaceProperties = solaceProperties;
         this.consumerPool = new SolaceConnectionPool(new SolaceSessionFactory(solaceProperties), solaceProperties.getPool());
     }
 
+    /**
+     * 訂閱指定的 Topic 以非同步接收訊息。
+     *
+     * @param topicName 要訂閱的 Topic 名稱。
+     * @throws Exception 如果訂閱過程中發生 JCSMP 異常。
+     */
     public void subscribeToTopic(String topicName) throws Exception {
         Topic topic = JCSMPFactory.onlyInstance().createTopic(topicName);
         JCSMPSession session = consumerPool.getSession();
@@ -75,6 +96,15 @@ public class SolaceConsumerService {
         }
     }
 
+    /**
+     * 建立一個 FlowReceiver 來監聽指定的 Queue 並接收訊息。
+     * <p>
+     * 使用客戶端確認模式 (Client Acknowledgment) 來確保訊息被處理後才會從 Queue 中移除。
+     * </p>
+     *
+     * @param queueName 要監聽的 Queue 名稱。
+     * @throws Exception 如果建立 FlowReceiver 的過程中發生 JCSMP 異常。
+     */
     public void receiveFromQueue(String queueName) throws Exception {
         Queue queue = JCSMPFactory.onlyInstance().createQueue(queueName);
         JCSMPSession session = consumerPool.getSession();
@@ -105,6 +135,13 @@ public class SolaceConsumerService {
         }
     }
 
+    /**
+     * 統一處理接收到的文字和檔案訊息。
+     *
+     * @param msg    接收到的原始 {@link BytesXMLMessage}。
+     * @param source 訊息來源的名稱 (Topic 或 Queue 名稱)。
+     * @param type   訊息來源的類型 ({@link SolaceService.DestinationType})。
+     */
     private void handleReceivedMessage(BytesXMLMessage msg, String source, SolaceService.DestinationType type) {
         if (msg instanceof TextMessage textMessage) {
             String messageText = textMessage.getText();
@@ -143,14 +180,33 @@ public class SolaceConsumerService {
         }
     }
 
+    /**
+     * 從快取中獲取並清除指定 Topic 的所有訊息。
+     *
+     * @param topicName Topic 名稱。
+     * @return 訊息列表。
+     */
     public List<String> getAndClearTopicMessages(String topicName) {
         return getAndClearMessagesFromCache(topicMessagesCache, topicName);
     }
 
+    /**
+     * 從快取中獲取並清除指定 Queue 的所有訊息。
+     *
+     * @param queueName Queue 名稱。
+     * @return 訊息列表。
+     */
     public List<String> getAndClearQueueMessages(String queueName) {
         return getAndClearMessagesFromCache(queueMessagesCache, queueName);
     }
 
+    /**
+     * 從指定的快取中原子性地獲取並清除所有訊息。
+     *
+     * @param cache 訊息快取 (Topic 或 Queue)。
+     * @param key   快取的鍵 (Topic 或 Queue 名稱)。
+     * @return 訊息列表。
+     */
     private List<String> getAndClearMessagesFromCache(Map<String, ConcurrentLinkedQueue<String>> cache, String key) {
         ConcurrentLinkedQueue<String> queue = cache.get(key);
         if (queue == null) {
@@ -164,6 +220,9 @@ public class SolaceConsumerService {
         return messages;
     }
 
+    /**
+     * 在應用程式關閉時，優雅地關閉所有消費者和連線池。
+     */
     @PreDestroy
     public void close() {
         logger.info("正在關閉 Solace 消費者資源...");
@@ -175,6 +234,9 @@ public class SolaceConsumerService {
         logger.info("Solace 消費者連線池已關閉。");
     }
 
+    /**
+     * 內部類別，用於封裝消費者的相關資源 (Session, Consumer, FlowReceiver)，以便於管理和關閉。
+     */
     private static class ConsumerInfo {
         private final JCSMPSession session;
         private final XMLMessageConsumer consumer;

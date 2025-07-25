@@ -14,6 +14,13 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import tw.zipe.solace.config.SolaceProperties;
 
+/**
+ * Solace 訊息生產者服務。
+ * <p>
+ * 負責將訊息和檔案發布到 Solace 訊息代理的 Topic 或 Queue。
+ * 使用 {@link SolaceConnectionPool} 來管理 JCSMP Session，以實現高效的資源利用。
+ * </p>
+ */
 @Service
 public class SolaceProducerService {
 
@@ -21,10 +28,23 @@ public class SolaceProducerService {
 
     private final SolaceConnectionPool producerPool;
 
+    /**
+     * 建構一個新的 SolaceProducerService。
+     *
+     * @param solaceProperties Solace 組態屬性，用於初始化連線池。
+     */
     public SolaceProducerService(SolaceProperties solaceProperties) {
         this.producerPool = new SolaceConnectionPool(new SolaceSessionFactory(solaceProperties), solaceProperties.getPool());
     }
 
+    /**
+     * 發送文字訊息到指定的目的地 (Topic 或 Queue)。
+     *
+     * @param destinationName 目的地名稱。
+     * @param type 目的地類型 ({@link SolaceService.DestinationType#TOPIC} 或 {@link SolaceService.DestinationType#QUEUE})。
+     * @param message 要發送的文字訊息。
+     * @throws Exception 如果發送過程中發生錯誤。
+     */
     public void sendTextMessage(String destinationName, SolaceService.DestinationType type, String message) throws Exception {
         JCSMPSession session = null;
         try {
@@ -58,6 +78,15 @@ public class SolaceProducerService {
         }
     }
 
+    /**
+     * 發送檔案到指定的目的地 (Topic 或 Queue)。
+     *
+     * @param destinationName 目的地名稱。
+     * @param type 目的地類型 ({@link SolaceService.DestinationType#TOPIC} 或 {@link SolaceService.DestinationType#QUEUE})。
+     * @param fileName 檔案名稱，將作為訊息屬性發送。
+     * @param fileData 檔案的位元組陣列，將作為訊息附件發送。
+     * @throws Exception 如果發送過程中發生錯誤。
+     */
     public void sendFile(String destinationName, SolaceService.DestinationType type, String fileName, byte[] fileData) throws Exception {
         JCSMPSession session = null;
         try {
