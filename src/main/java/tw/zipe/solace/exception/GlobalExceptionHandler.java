@@ -16,12 +16,13 @@ import java.util.Map;
 public class GlobalExceptionHandler {
 
     private static final Logger logger = LoggerFactory.getLogger(GlobalExceptionHandler.class);
+    private static final String ERROR_KEY = "error";
 
     @ExceptionHandler(JCSMPException.class)
     public ResponseEntity<Object> handleJCSMPException(JCSMPException ex, WebRequest request) {
         logger.error("Solace JCSMP Error: {}", ex.getMessage(), ex);
         Map<String, String> body = Map.of(
-                "error", "Solace Messaging Error",
+                ERROR_KEY, "Solace Messaging Error",
                 "message", ex.getMessage()
         );
         return new ResponseEntity<>(body, HttpStatus.INTERNAL_SERVER_ERROR);
@@ -31,7 +32,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<Object> handleIOException(IOException ex, WebRequest request) {
         logger.error("IO Error: {}", ex.getMessage(), ex);
         Map<String, String> body = Map.of(
-                "error", "File I/O Error",
+                ERROR_KEY, "File I/O Error",
                 "message", "Error processing file."
         );
         return new ResponseEntity<>(body, HttpStatus.BAD_REQUEST);
@@ -41,7 +42,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<Object> handleGlobalException(Exception ex, WebRequest request) {
         logger.error("Unhandled Error: {}", ex.getMessage(), ex);
         Map<String, String> body = Map.of(
-                "error", "Internal Server Error",
+                ERROR_KEY, "Internal Server Error",
                 "message", "An unexpected error occurred."
         );
         return new ResponseEntity<>(body, HttpStatus.INTERNAL_SERVER_ERROR);
