@@ -57,23 +57,7 @@ public class SolaceConnectionPool {
         }
     }
 
-    /**
-     * 使一個 JCSMP Session 失效，並從連線池中移除。
-     * <p>
-     * 當偵測到 Session 無法使用時 (例如，連線中斷)，應呼叫此方法。
-     * </p>
-     *
-     * @param session 要使其失效的 {@link JCSMPSession}。
-     */
-    public void invalidateSession(JCSMPSession session) {
-        if (session != null) {
-            try {
-                pool.invalidateObject(session);
-            } catch (Exception e) {
-                // ignore
-            }
-        }
-    }
+
 
     /**
      * 關閉連線池並釋放所有資源。
